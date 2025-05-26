@@ -91,19 +91,25 @@ class AirShipEnv(gym.Env):
 
         # draw uav
         for uav in self.uav:
-            self.screen.blit(uav.rotated_image, uav.rotated_rect)
-            pygame.draw.circle(self.screen, (200, 200, 200), (int(uav.x), int(uav.y)), uav.detect_range, 1)
-            pygame.draw.circle(self.screen, (255, 55, 55), (int(uav.x), int(uav.y)), uav.attack_range, 1)
+            if uav.is_alive:
+                self.screen.blit(uav.rotated_image, uav.rotated_rect)
+                pygame.draw.circle(self.screen, (200, 200, 200), (int(uav.x), int(uav.y)), uav.detect_range, 1)
+                pygame.draw.circle(self.screen, (255, 55, 55), (int(uav.x), int(uav.y)), uav.attack_range, 1)
         
-        # draw target        
-        self.screen.blit(self.tgt.rotated_image, self.tgt.rotated_rect)
-        pygame.draw.circle(self.screen, (200, 200, 200), (int(self.tgt.x), int(self.tgt.y)), self.tgt.detect_range, 1)
-        pygame.draw.circle(self.screen, (255, 55, 55), (int(self.tgt.x), int(self.tgt.y)), self.tgt.attack_range, 1)
+        # draw target
+        if self.tgt.is_alive:
+            self.screen.blit(self.tgt.rotated_image, self.tgt.rotated_rect)
+            pygame.draw.circle(self.screen, (200, 200, 200), (int(self.tgt.x), int(self.tgt.y)), self.tgt.detect_range, 1)
+            pygame.draw.circle(self.screen, (255, 55, 55), (int(self.tgt.x), int(self.tgt.y)), self.tgt.attack_range, 1)
         
         # draw fanc
-        self.screen.blit(self.fanc.rotated_image, self.fanc.rotated_rect)
-        pygame.draw.circle(self.screen, (255, 55, 55), (int(self.fanc.x), int(self.fanc.y)), self.fanc.attack_range, 1)
+        if self.fanc.is_alive:
+            self.screen.blit(self.fanc.rotated_image, self.fanc.rotated_rect)
+            pygame.draw.circle(self.screen, (255, 55, 55), (int(self.fanc.x), int(self.fanc.y)), self.fanc.attack_range, 1)
         
+        # draw missile
+
+        # flip all 
         pygame.display.flip()
 
     # Close Render windows

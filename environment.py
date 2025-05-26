@@ -3,6 +3,9 @@ import numpy as np
 import pygame
 from gymnasium import spaces
 from uav import UAV
+from ship import SHIP
+from fanc import FANC
+
 
 class AirShipEnv(gym.Env):
 
@@ -36,6 +39,8 @@ class AirShipEnv(gym.Env):
             pygame.display.set_caption("MISSION01")
 
         self.uav = [UAV() for _ in range(agent_num)]
+        self.tgt = SHIP()
+        self.fanc = FANC()
 
     # RESET
     def reset(self):
@@ -46,6 +51,10 @@ class AirShipEnv(gym.Env):
             uav.y = self.window_size[1] - 50
             uav.theta = np.pi / 2
         
+        self.tgt.x = self.window_size[0] - 200
+        self.tgt.y = 200
+        self.tgt.theta = np.pi / 2
+
         self.render()
         return self.get_obs()
 
@@ -61,7 +70,7 @@ class AirShipEnv(gym.Env):
     # get observation {all}
     def get_obs(self):
         obs = []
-        for uav in self.uav:
+        for i, uav in enumerate(self.uav):
             obs.append([uav.x, uav.y, uav.theta])
 
         return obs
@@ -73,19 +82,28 @@ class AirShipEnv(gym.Env):
 
     # render one frame
     def _render_frame(self):
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close()
                 return
-        
+        # flip background
         self.screen.blit(self.bg, (0, 0))
 
+        # draw uav
         for uav in self.uav:
             self.screen.blit(uav.rotated_image, uav.rotated_rect)
             pygame.draw.circle(self.screen, (200, 200, 200), (int(uav.x), int(uav.y)), uav.detect_range, 1)
             pygame.draw.circle(self.screen, (255, 55, 55), (int(uav.x), int(uav.y)), uav.attack_range, 1)
-            
+        
+        # draw target        
+        self.screen.blit(self.tgt.rotated_image, self.tgt.rotated_rect)
+        pygame.draw.circle(self.screen, (200, 200, 200), (int(self.tgt.x), int(self.tgt.y)), self.tgt.detect_range, 1)
+        pygame.draw.circle(self.screen, (255, 55, 55), (int(self.tgt.x), int(self.tgt.y)), self.tgt.attack_range, 1)
+        
+        # draw fanc
+        self.screen.blit(self.fanc.rotated_image, self.fanc.rotated_rect)
+        pygame.draw.circle(self.screen, (255, 55, 55), (int(self.fanc.x), int(self.fanc.y)), self.fanc.attack_range, 1)
+        
         pygame.display.flip()
 
     # Close Render windows

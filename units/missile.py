@@ -1,7 +1,7 @@
-import numpy as np
 import pygame
+import numpy as np
 
-class UAV():
+class MISSILE():
 
     def __init__(self, x = 0, y = 0, theta = 0):
 
@@ -10,13 +10,13 @@ class UAV():
         self.theta = theta
 
         self.is_alive = True
-        self.speed = 5
+        self.speed = 20
 
-        self.detect_range = 25
-        self.attack_range = 10
-
-        self.image = pygame.image.load("icons/uavr.png").convert_alpha()
-        self.rotated_image = pygame.transform.rotate(self.image, np.degrees(self.theta)-90)
+        self.image = pygame.image.load("images/icons/mslr.png").convert_alpha()
+        width = self.image.get_width() * 0.5
+        height = self.image.get_height() * 0.5
+        self.scaled_image = pygame.transform.scale(self.image, (width, height))
+        self.rotated_image = pygame.transform.rotate(self.scaled_image, np.degrees(self.theta)-90)
         self.rotated_rect = self.rotated_image.get_rect(center = (self.x, self.y))
 
     def move(self, action, window_size):
@@ -25,7 +25,7 @@ class UAV():
 
         self.x += self.speed * np.cos(self.theta)
         self.y -= self.speed * np.sin(self.theta)
-        
+
         if self.x > window_size[0]:
             self.x = window_size[0]
         elif self.x < 0:
@@ -36,5 +36,5 @@ class UAV():
         elif self.y < 0:
             self.y = 0
         
-        self.rotated_image = pygame.transform.rotate(self.image, np.degrees(self.theta)-90)
+        self.rotated_image = pygame.transform.rotate(self.scaled_image, np.degrees(self.theta)-90)
         self.rotated_rect = self.rotated_image.get_rect(center=(self.x, self.y))

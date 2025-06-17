@@ -3,7 +3,7 @@ import pygame
 
 class UAV():
 
-    def __init__(self, x = 0, y = 0, theta = 0, image = 'uavr', speed = 3, detect_range = 30, attack_range = 20):
+    def __init__(self, x = 0.0, y = 0.0, theta = 0, image = 'uavr', speed = 3, detect_range = 70, attack_range = 50):
 
         self.x = x
         self.y = y

@@ -3,7 +3,7 @@ import pygame
 
 class SHIP():
 
-    def __init__(self, x=0, y=0, theta=0, image='shipr', speed=1, detect_range=50, attack_range=30):
+    def __init__(self, x=0.0, y=0.0, theta=0.0, image='shipr', speed=1, detect_range=100, attack_range=70):
 
         self.x = x
         self.y = y
@@ -17,15 +17,24 @@ class SHIP():
         self.attack_range = attack_range
 
         self.image = pygame.image.load("images/icons/%s.png" % self.image).convert_alpha()
-        width = self.image.get_width() * 1.5
-        height = self.image.get_height() * 1.5
+        width = self.image.get_width() * 1.2
+        height = self.image.get_height() * 1.2
         self.scaled_image = pygame.transform.scale(self.image, (width, height))
         self.flipped_image = pygame.transform.flip(self.scaled_image, True, False)
         self.flipped_rect = self.flipped_image.get_rect(center=(self.x, self.y))
     
+    def change_icon(self):
+        self.image = pygame.image.load("images/icons/%s.png" % self.image).convert_alpha()
+        width = self.image.get_width() * 1.2
+        height = self.image.get_height() * 1.2
+        self.scaled_image = pygame.transform.scale(self.image, (width, height))
+        # self.flipped_image = pygame.transform.flip(self.scaled_image, True, False)
+        self.flipped_rect = self.flipped_image.get_rect(center=(self.x, self.y))
+
     def move(self, action, window_size):
 
         self.theta += action
+        self.theta = self.theta%(2 * np.pi)
 
         self.x += self.speed * np.cos(self.theta)
         self.y -= self.speed * np.sin(self.theta)
@@ -40,7 +49,7 @@ class SHIP():
         elif self.y < 0:
             self.y = 0
         
-        if 0 < self.theta < np.pi/2 or 3*np.pi/2 < self.theta < 2*np.pi:
+        if np.cos(self.theta) > 0:
             self.flipped_image = pygame.transform.flip(self.scaled_image, True, False)
         else:
             self.flipped_image = self.scaled_image

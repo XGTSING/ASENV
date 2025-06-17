@@ -9,14 +9,14 @@ from units.ship import SHIP
 
 class Env(gym.Env):
 
-    def __init__(self, render_mode = None, agent_num = [1, 1], contact_num = [1, 1], window_size = [1200, 800]):
+    def __init__(self, render_mode = None, agent_num = [1, 1], window_size = [1200, 800]):
         
         self.window_size = window_size
         self.agent_num   = agent_num
-        self.contact_num = contact_num
 
         # 标志位
         self.no_circle = True
+        self.no_line = True
 
         # 定义空间
         self.observation_space = spaces.Box(
@@ -48,43 +48,24 @@ class Env(gym.Env):
         self.uav  = [UAV(image='uavr') for _ in range(self.agent_num[0])]
         self.usv  = [USV(image='usvr') for _ in range(self.agent_num[1])]
 
-        self.DES  = SHIP(x = 1100, y = 100,detect_range=80, attack_range=50)
-        self.BUJI = SHIP()
-
-        self.uavb = [UAV(image='uavy') for _ in range(self.contact_num[0])]
-        self.usvb = [USV(image='usvy') for _ in range(self.contact_num[1])]
+        self.User = UAV(x=self.window_size[0]/2, y= self.window_size[1]-50, theta=np.pi/2, image='usery', speed=5)
+        self.UserAction = 0
+        self.DES  = SHIP(x = 900, y = 300, theta=0, image='shipy', speed=0, detect_range=80, attack_range=50)
 
     # RESET
     def reset(self):
         super().reset()
-        # 驱逐舰方位初始化
-        self.DES.x     = self.window_size[0] - 100
-        self.DES.y     = 100
-        self.DES.theta = 0
-        # 补给舰方位初始化
-        self.BUJI.x     = 200
-        self.BUJI.y     = self.window_size[1] - 200
-        self.BUJI.theta = np.arctan2(self.BUJI.y - self.DES.y, self.DES.x - self.BUJI.x)
+
         # 无人机方位初始化
         for uav in self.uav:
-            uav.x     = 150
-            uav.y     = self.window_size[1] - 150
-            uav.theta = np.arctan2(self.BUJI.y - self.DES.y, self.DES.x - self.BUJI.x)
+            uav.x     = 250
+            uav.y     = self.window_size[1] - 200
+            uav.theta = np.arctan2(uav.y - self.DES.y, self.DES.x - uav.x)
         # 无人艇方位初始化
         for usv in self.usv:
-            usv.x     = 150
-            usv.y     = self.window_size[1] - 150
-            usv.theta = np.arctan2(self.BUJI.y - self.DES.y, self.DES.x - self.BUJI.x)
-
-        # 蓝无人单位方位初始化
-        for uavb in self.uavb:
-            uavb.x     = 800
-            uavb.y     = 600
-            uavb.theta = np.arctan2(uavb.y - self.BUJI.y, self.BUJI.x - uavb.x)
-        for usvb in self.usvb:
-            usvb.x     = 800
-            usvb.y     = 600
-            usvb.theta = np.arctan2(usvb.y - self.BUJI.y, self.BUJI.x - usvb.x)
+            usv.x     = 250
+            usv.y     = self.window_size[1] - 250
+            usv.theta = np.arctan2(usv.y - self.DES.y, self.DES.x - usv.x)
 
         self.render()
         return self.get_obs()
@@ -100,59 +81,44 @@ class Env(gym.Env):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_c:
                     self.no_circle = not self.no_circle
+                if event.key == pygame.K_l:
+                    self.no_line = not self.no_line
+                if event.key == pygame.K_RIGHT:
+                    self.UserAction = -np.pi/6
+                elif event.key == pygame.K_LEFT:
+                    self.UserAction = np.pi/6
+                if event.key == pygame.K_UP:
+                    self.User.speed += 2
+                    self.User.speed = max(self.User.speed, 0)
+                elif event.key == pygame.K_DOWN:
+                    self.User.speed -= 2
+                    self.User.speed = max(self.User.speed, 0)
 
         # 移动
+        self.User.move(self.UserAction, self.window_size)
+        self.UserAction = 0
+
+        self.DES.move(0, self.window_size)
+
         for i, uav in enumerate(self.uav):
             if uav.is_alive:
-                uav.move(action[i], self.window_size)
+                uav.move(np.random.normal(0, np.pi/20), self.window_size)
 
         for i, usv in enumerate(self.usv):
             if usv.is_alive:
-                usv.move(action[i+len(self.uav)], self.window_size)
+                usv.move(np.random.normal(0, np.pi/20), self.window_size)
 
-        if self.BUJI.is_alive:
-            self.BUJI.move(0, self.window_size)
-        
-        for i, uavb in enumerate(self.uavb):
-            if uavb.is_alive:
-                angle = np.arctan2(uavb.y - self.BUJI.y, self.BUJI.x - uavb.x)
-                uavb.move(angle - uavb.theta + np.random.normal(0, np.pi/12), self.window_size)
-        for i, usvb in enumerate(self.usvb):
-            if usvb.is_alive:
-                angle = np.arctan2(usvb.y - self.BUJI.y, self.BUJI.x - usvb.x)
-                usvb.move(angle - usvb.theta + np.random.normal(0, np.pi/6), self.window_size)
-
-        # 死亡逻辑
         for uav in self.uav:
-            if uav.is_alive:
-                for usvb in self.usvb:
-                    if usvb.is_alive:
-                        distance = np.sqrt((uav.x - usvb.x)**2 + (uav.y - usvb.y)**2)
-                        if distance < uav.attack_range:
-                            usvb.is_alive = False
+            dx = uav.x - self.DES.x
+            dy = uav.y - self.DES.y
+            dis = np.sqrt(dx **2 + dy ** 2)
+            if dis < uav.detect_range:
+                self.DES.image = 'shipb'
+                self.DES.change_icon()
 
-        for usv in self.usv:
-            if usv.is_alive:
-                for usvb in self.usvb:
-                    if usvb.is_alive:
-                        distance = np.sqrt((usv.x - usvb.x)**2 + (usv.y - usvb.y)**2)
-                        if distance < usv.bomb_range:
-                            usvb.is_alive = False
-                            usv.is_alive = False
-        for uavb in self.uavb:
-            if uavb.is_alive:
-                for uav in self.uav:
-                    if uav.is_alive:
-                        distance = np.sqrt((uavb.x - uav.x)**2 + (uavb.y - uav.y)**2)
-                        if distance < uavb.attack_range:
-                            uav.is_alive = False
-                            
-        for usvb in self.usvb:
-            if usvb.is_alive and self.BUJI.is_alive:
-                distance = np.sqrt((usvb.x - self.BUJI.x)**2 + (usvb.y - self.BUJI.y)**2)
-                if distance < usvb.bomb_range:
-                    usvb.is_alive = False
-                    self.BUJI.is_alive = False
+        if np.linalg.norm(np.array([self.User.x, self.User.y], dtype= np.float64) - np.array([self.DES.x, self.DES.y], dtype= np.float64)) < self.User.detect_range:
+            self.DES.image = 'shipb'
+            self.DES.change_icon()
 
         self.render()
         next_states = self.get_obs()
@@ -176,7 +142,6 @@ class Env(gym.Env):
 
     # get_dones {all}
     def get_dones(self):
-        
         pass
 
     # render or not
@@ -190,8 +155,31 @@ class Env(gym.Env):
             if event.type == pygame.QUIT:
                 self.close()
                 return
+            
         # flip background
-        self.screen.blit(self.bg, (0, 0))
+        # self.screen.blit(self.bg, (0, 0))
+        self.screen.fill((24, 73, 132))
+        font = pygame.font.SysFont("Arial", 16)
+
+        # draw line
+        if not self.no_line:
+            for i in range(3):
+                pygame.draw.line(self.screen, (150, 150, 150), (300*(i+1), 0), ( 300*(i+1), 800), width=1)
+                pygame.draw.line(self.screen, (150, 150, 150), (0, 200*(i+1)), (1200, 200*(i+1)), width=1)
+            for i in range(4):
+                for j in range(4):
+                    text = font.render(f"A{(i+1)*(j+1)}", True, (255, 255, 255))
+                    self.screen.blit(text, (300*i + 275, 200*j + 180))
+
+        # draw user
+        self.screen.blit(self.User.rotated_image, self.User.rotated_rect)
+        pygame.draw.circle(self.screen, (200, 200, 200), (int(self.User.x), int(self.User.y)), self.User.detect_range, 1)
+
+        # draw area
+        fill_area = pygame.Rect(0, 0, 1200, 800)
+        pygame.draw.rect(self.screen, (200, 0, 0), fill_area, 1)
+        text = font.render("TargetArea", True, (255, 255, 255))
+        self.screen.blit(text, (5, 5))
 
         # draw uavr
         for uav in self.uav:
@@ -204,40 +192,18 @@ class Env(gym.Env):
         # draw usvr
         for usv in self.usv:
             if usv.is_alive:
-                pygame.draw.circle(self.screen, (255,255,0), (int(usv.x), int(usv.y)), usv.bomb_range, 1)
+                pygame.draw.circle(self.screen, (255,255,0), (int(usv.x), int(usv.y)), usv.bomb_range, 2)
                 self.screen.blit(usv.flipped_image, usv.flipped_rect)
                 if not self.no_circle:
                     pygame.draw.circle(self.screen, (200,200,200), (int(usv.x), int(usv.y)), usv.detect_range, 1)
                     pygame.draw.circle(self.screen, (255,55,55), (int(usv.x), int(usv.y)), usv.attack_range, 1)
-                
-        # draw uavb
-        for uavb in self.uavb:
-            if uavb.is_alive:
-                self.screen.blit(uavb.rotated_image, uavb.rotated_rect)
-                if not self.no_circle:
-                    pygame.draw.circle(self.screen, (200,200,200), (int(uavb.x), int(uavb.y)), uavb.detect_range, 1)
-                    pygame.draw.circle(self.screen, (255,55,55), (int(uavb.x), int(uavb.y)), uavb.attack_range, 1)
-
-        # draw usvb
-        for usvb in self.usvb:
-            if usvb.is_alive:
-                pygame.draw.circle(self.screen, (255,255,0), (int(usvb.x), int(usvb.y)), usvb.bomb_range, 1)
-                self.screen.blit(usvb.flipped_image, usvb.flipped_rect)
-                if not self.no_circle:
-                    pygame.draw.circle(self.screen, (200,200,200), (int(usvb.x), int(usvb.y)), usvb.detect_range, 1)
-                    pygame.draw.circle(self.screen, (255,55,55), (int(usvb.x), int(usvb.y)), usvb.attack_range, 1)
-                
+       
         # draw Destroyer
         if self.DES.is_alive:
             self.screen.blit(self.DES.flipped_image, self.DES.flipped_rect)
             pygame.draw.circle(self.screen, (200, 200, 200), (int(self.DES.x), int(self.DES.y)), self.DES.detect_range, 1)
             pygame.draw.circle(self.screen, (255, 55, 55), (int(self.DES.x), int(self.DES.y)), self.DES.attack_range, 1)
         
-        # draw BUJI
-        if self.BUJI.is_alive:
-            self.screen.blit(self.BUJI.flipped_image, self.BUJI.flipped_rect)
-            pygame.draw.circle(self.screen, (200, 200, 200), (int(self.BUJI.x), int(self.BUJI.y)), self.BUJI.detect_range, 1)
-            # pygame.draw.circle(self.screen, (255, 55, 55), (int(self.BUJI.x), int(self.BUJI.y)), self.BUJI.attack_range, 1)
         
         # flip all 
         pygame.display.flip()
